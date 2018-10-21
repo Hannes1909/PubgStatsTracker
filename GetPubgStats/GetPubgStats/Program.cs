@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Net.Http;
+using Newtonsoft.Json;
 
 namespace GetPubgStats
 {
@@ -11,8 +14,8 @@ namespace GetPubgStats
 
             string apikey = PubgStatsHelper.GetRandomApiKey();
             string accountid = "account.2b1f61ca3b3448b1b9b06aa4ab2338c6";
-            string seasonid = "division.bro.official.2018-09";
-            string baseUrl = "https://api.pubg.com/shards/pc-eu/players/" + accountid + "/seasons/" + seasonid;
+            string seasonid = "division.bro.official.pc-2018-01";
+            string baseUrl = "https://api.pubg.com/shards/pc-eu/players?filter[playerNames]=Hannes1909";
 
             HttpClientHandler clientHandler = pubgStatsHTTP.ClientHandler;
             HttpRequestMessage buildRequest = pubgStatsHTTP.BuildRequest(baseUrl, apikey);
@@ -21,7 +24,13 @@ namespace GetPubgStats
             {
                 var response = client.SendAsync(buildRequest).ConfigureAwait(false).GetAwaiter().GetResult();
                 var responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                Console.WriteLine(responseContent);
+                var stats = JsonConvert.DeserializeObject<PubgPlayer>(responseContent);
+
+                
+                {
+                    Console.WriteLine("Deserialized: " + stats.name);
+                }
+                
             }
             Console.ReadLine();
         }
