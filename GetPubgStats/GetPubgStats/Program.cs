@@ -24,11 +24,11 @@ namespace GetPubgStats
             {
                 var response = client.SendAsync(buildRequest).ConfigureAwait(false).GetAwaiter().GetResult();
                 var responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                var stats = JsonConvert.DeserializeObject<PubgPlayer>(responseContent);
+                var stats = JsonConvert.DeserializeObject<PlayerSearchResult>(responseContent);
 
                 
                 {
-                    Console.WriteLine("Deserialized: " + stats.name);
+                    Console.WriteLine("Deserialized: " + stats.data[0].id);
                 }
                 
             }
