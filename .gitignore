@@ -328,3 +328,4 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+/GetPubgStats/GetPubgStats/PubgStatsHelper.cs
