@@ -10,28 +10,14 @@ namespace GetPubgStats
     {
         static void Main(string[] args)
         {
-            var pubgStatsHTTP = new PubgStatsHTTP();
+            Configuration.Data data = new Configuration.Data("config.json");
 
-            string apikey = PubgStatsHelper.GetRandomApiKey();
-            string accountid = "account.2b1f61ca3b3448b1b9b06aa4ab2338c6";
-            string seasonid = "division.bro.official.pc-2018-01";
-            string baseUrl = "https://api.pubg.com/shards/pc-eu/players?filter[playerNames]=Hannes1909";
+            PubgAPI.PubgAPICalls pubgapi = new PubgAPI.PubgAPICalls();
+            pubgapi.SetAPIKeys(data.Get_bubgAPIKeys());
 
-            HttpClientHandler clientHandler = pubgStatsHTTP.ClientHandler;
-            HttpRequestMessage buildRequest = pubgStatsHTTP.BuildRequest(baseUrl, apikey);
+            PubgAPI.Player player = pubgapi.GetPlayerData("Hannes1909");
 
-            using (HttpClient client = new HttpClient(clientHandler))
-            {
-                var response = client.SendAsync(buildRequest).ConfigureAwait(false).GetAwaiter().GetResult();
-                var responseContent = response.Content.ReadAsStringAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                var stats = JsonConvert.DeserializeObject<PlayerSearchResult>(responseContent);
-
-                
-                {
-                    Console.WriteLine("Deserialized: " + stats.data[0].id);
-                }
-                
-            }
+            Console.WriteLine("Deserialized: " + player.id);
             Console.ReadLine();
         }
 
