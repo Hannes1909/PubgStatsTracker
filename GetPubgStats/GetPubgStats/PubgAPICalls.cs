@@ -45,6 +45,19 @@ namespace PubgAPI
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="matchid"></param>
+        /// <returns>string = json-data as string, PubgAPI.Match = deserialized object</returns>
+        public (string json, PubgAPI.Match) GetMatchData(string matchid)
+        {
+            Task<HttpContent> responseContent = this.HttpRequest($"https://api.pubg.com/shards/pc-eu/matches/{matchid}");
+            string _json = responseContent.Result.ReadAsStringAsync().Result;
+            return (_json, JsonConvert.DeserializeObject<Match>(_json));
+        }
+
+
+        /// <summary>
         /// construct http-request with apikeys
         /// </summary>
         /// <param name="url"></param>
@@ -92,4 +105,5 @@ namespace PubgAPI
             throw new Exception("Last Response: " + _httpresult.ToString());
         }
     }
+
 }

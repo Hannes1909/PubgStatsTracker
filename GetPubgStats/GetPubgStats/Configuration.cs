@@ -19,7 +19,7 @@ namespace Configuration
             Data.data = configuration.Build().Get<Configuration>();
         }
 
-        public string[] Get_bubgAPIKeys()
+        public string[] Get_PubgAPIKeys()
         {
             return Data.data.pubgAPI.APIKeys;
         }
