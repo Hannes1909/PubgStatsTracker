@@ -330,3 +330,4 @@ ASALocalRun/
 .mfractor/
 
 /GetPubgStats/GetPubgStats/PubgStatsHelper.cs
+GetPubgStats/GetPubgStats/config.json

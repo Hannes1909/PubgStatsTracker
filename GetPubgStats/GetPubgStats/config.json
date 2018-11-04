@@ -1,7 +1,10 @@
 { "PubgAPI": {
       "APIKeys": [ 
-             "abc",
-             "abcd"
+             "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIyY2NlODcyMC1hNjEzLTAxMzYtNTM2Mi00OTdlYzljMDgyNDIiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNTM4MjI1MDAyLCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii1jNzZlM2Y5ZS1mNWRiLTQzMGQtOTM5NS1mY2RmMjFmNDIxYTYifQ._EXAVAyuFts74R5RcLx-8D-EmAgkYjrSehIdcbgbHFA",
+             "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJlZDRiNjYzMC1hNGQ2LTAxMzYtODNmMC0yOTE5ZjhkOWZiZGYiLCJpc3MiOiJnYW1lbG9ja2VyIiwiaWF0IjoxNTM4MDg5MTc1LCJwdWIiOiJibHVlaG9sZSIsInRpdGxlIjoicHViZyIsImFwcCI6Ii1iNGExMWUzMS0zZWYzLTRkMzktOWUzMC0xNzllYjA4ZmNjNDgifQ.2fFhNpc3G85CHCrBK8TU1j7ffgji_QsiGVaIhh_fKsU"
       ]
+  },
+  "DbLayer": {
+    "Connectionstring": "SERVER=127.0.0.1;DATABASE=pubg_stats;UID=pubg_stats;PASSWORD=aC6lyTTYm5CSE3AaDfcA3tSIh5VEpLyk;"
   }
 }

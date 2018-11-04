@@ -8,26 +8,41 @@ namespace GetPubgStats
     {
         static void Main(string[] args)
         {
+            Program.Test2();            
+        }
+
+        static void Test1()
+        {
+            Configuration.Data data = new Configuration.Data("config.json");
+
+            PubgStatsController controller = new PubgStatsController( data.Get_DatabaseConnectionstring(), data.Get_PubgAPIKeys());
+            controller.GetPlayerLastKills("gucki5",20);
+            controller.GetPlayerLastKills("Hannes1909",20);
+            controller.GetPlayerLastKills("ClawHunter",20);
+            controller.UpdatePlayerstats();
+        }
+
+        static void Test2()
+        {
+            Configuration.Data data = new Configuration.Data("config.json");
+            Database.DbLayer db = new Database.DbLayer(data.Get_DatabaseConnectionstring());
+
+            Database.Models.Match match = db.GetMatchdata("0027a517-1b59-443b-8eed-40e86267c5ef");
+            PubgAPI.Json<PubgAPI.Match> pubgmatch = new PubgAPI.Json<PubgAPI.Match>(match.Jsondata);
+            var xxx = pubgmatch.AsObject();
+
+        }
+
+        static void Test3()
+        {
             Configuration.Data data = new Configuration.Data("config.json");
 
             PubgAPI.PubgAPICalls pubgapi = new PubgAPI.PubgAPICalls();
             pubgapi.SetAPIKeys(data.Get_PubgAPIKeys());
-
-            PubgAPI.Player player = pubgapi.GetPlayerData("Hannes1909");
-            Console.WriteLine($"accountid for Hannes1909: {player?.id}" );
-
-            (string matchjson, PubgAPI.Match match) = pubgapi.GetMatchData("ce0fabe5-0b03-4c8d-b706-101507a3d19b");
-            int? _place = (from _participant in match.included.OfType<PubgAPI.PlayerdataParticipant>()
-                          where _participant.attributes.stats.playerId == player.id
-                          select _participant.attributes.stats.winPlace
-                         ).FirstOrDefault();
-            Console.WriteLine($"{_place}. Place for Hannes1909 in match 'ce0fabe5-0b03-4c8d-b706-101507a3d19b'");
+            var player = pubgapi.GetPlayerData4Playername("gucki5");
 
 
-            Console.ReadLine();
         }
-
-        
 
     }
 

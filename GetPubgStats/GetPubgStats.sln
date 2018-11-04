@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.2046
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GetPubgStats", "GetPubgStats\GetPubgStats.csproj", "{2226411F-82BC-42BF-B9BF-E500D166A909}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PubgStatsCLI", "PubgStatsCLI\PubgStatsCLI.csproj", "{9F5ED85C-3F41-4FBA-B31A-19FA0209B4AE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PubgStatsController", "PubgStatsController\PubgStatsController.csproj", "{83E841E1-5168-4F5B-BFCF-965E4B4AFB22}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2226411F-82BC-42BF-B9BF-E500D166A909}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2226411F-82BC-42BF-B9BF-E500D166A909}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2226411F-82BC-42BF-B9BF-E500D166A909}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2226411F-82BC-42BF-B9BF-E500D166A909}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F5ED85C-3F41-4FBA-B31A-19FA0209B4AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F5ED85C-3F41-4FBA-B31A-19FA0209B4AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F5ED85C-3F41-4FBA-B31A-19FA0209B4AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F5ED85C-3F41-4FBA-B31A-19FA0209B4AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83E841E1-5168-4F5B-BFCF-965E4B4AFB22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83E841E1-5168-4F5B-BFCF-965E4B4AFB22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83E841E1-5168-4F5B-BFCF-965E4B4AFB22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83E841E1-5168-4F5B-BFCF-965E4B4AFB22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
