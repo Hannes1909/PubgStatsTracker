@@ -5,18 +5,23 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using PubgAPI;
+using Pomelo.EntityFrameworkCore.MySql;
 
 namespace Database
 {
     public class DbLayer
     {
         Models.PubgDbContext dbc;
-        public DbLayer( string Connectionstring)
+
+        /// <summary>
+        /// fetch Json-Object für a Matchid
+        /// </summary>
+        Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> func_fetchPubgMatch;
+
+        public DbLayer( string Connectionstring, Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> FetchPubgMatch)
         {
             this.dbc = new Models.PubgDbContext(Connectionstring);
-            
-
-            //this.dbc.Database.EnsureCreated();
+            this.func_fetchPubgMatch = FetchPubgMatch;
         }
 
         public Models.Playerdetail GetPlayer4Playername(string Name)
@@ -50,82 +55,71 @@ namespace Database
             }
         }
 
-        public IEnumerable<Models.Playerdetail> GetPlayerWithActiveRequests(TimeSpan RequestWithinTimeSpan)
+        public IQueryable<Models.Playerdetail> GetPlayerWithActiveRequests(TimeSpan RequestWithinTimeSpan)
         {
-            return this.dbc.Players.AsNoTracking().Where( _rec => _rec.LastStatsRequest >= System.DateTime.Now.Add( -RequestWithinTimeSpan));
+            DateTime whereDateTime = System.DateTime.Now.Add(-RequestWithinTimeSpan);
+            return this.dbc.Players.AsNoTracking().Where( _rec => _rec.LastStatsRequest >= whereDateTime);
         } 
 
 
-        public IEnumerable<Models.Playerdetail> GetPlayers()
+        public IQueryable<Models.Playerdetail> GetPlayers()
         {
             return this.dbc.Players.AsNoTracking();
         }
 
-        public void CreatePlayermatches(PubgAPI.SelektorAccountid Accountid, IEnumerable<PubgAPI.SelektorMatchid> Matchids)
+        /// <summary>
+        /// retrieve matches and insert into database
+        /// </summary>
+        /// <param name="Macthids"></param>
+        /// <returns>matchdata jsonobject</returns>
+        public IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> FetchMatches(IEnumerable<PubgAPI.SelektorMatchid> Macthids)
         {
-            foreach(PubgAPI.SelektorMatchid matchid in Matchids.AsStringArray().Except( this.dbc.Matches.Select(_rec => _rec.Matchid ) ) ) 
-            {
-                Models.Match match = new Models.Match();
-                match.Matchid = matchid;
-                this.dbc.Matches.Add( match );
-            }
-            Task<int> inserttaskmatches = this.dbc.SaveChangesAsync();
-
-            foreach(PubgAPI.SelektorMatchid matchid in Matchids.Except( this.dbc.Playermatches.Where( _rec => _rec.Accountid == Accountid.Key ).Select( _rec => _rec.MatchidAsObject )))
-            {
-                Models.Playermatches playermatch = new Models.Playermatches();
-                playermatch.Accountid = Accountid;
-                playermatch.Matchid = matchid;
-
-                this.dbc.Playermatches.Add( playermatch );
-            }
-
-            var _updates = inserttaskmatches.Result;
-            this.dbc.SaveChanges();
-        }
-
-        public IEnumerable<PubgAPI.SelektorMatchid> GetMatchidsWithoutJson()
-        {
-            return this.dbc.Matches.Where( _rec => _rec.Jsondata == null).Select( _rec => new PubgAPI.SelektorMatchid( _rec.Matchid ) );
-        }
-
-        public void StoreMatchAndPlayersStats(IEnumerable<PubgAPI.Player> Players, Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> FetchPubgMatch)
-        {
-            IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany( _rec => _rec.relationships.matches.data.Select( _match => _match.id )).Distinct();
-
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatasInDB = 
+            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatasInDB =
                             (from _rec in this.dbc.Matches
-                             where matchids4AllPlayer.AsStringArray().Contains( _rec.Matchid)
-                             select _rec
+                             where Macthids.AsStringArray().Contains(_rec.Matchid)
+                             select new { matchid = new PubgAPI.SelektorMatchid(_rec.Matchid), jsondata = _rec.Jsondata }
                             ).ToArray()
-                            .Select(_rec => { return ( _rec.MatchidAsObject, new PubgAPI.Json<PubgAPI.Match>(_rec.Jsondata) ); } );
+                            .Select(_rec => { return (_rec.matchid, new PubgAPI.Json<PubgAPI.Match>(_rec.jsondata)); });
 
-// (from _matchid in matchids4AllPlayer.Select(_a => _a.Value).Except(matchdatasInDB.Select(_rec => _rec.matchid.Value))
             IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatasNotInDb =
-                            (from _matchid in matchids4AllPlayer.Except(matchdatasInDB.Select(_rec => _rec.matchid))
-                             select (_matchid, FetchPubgMatch(_matchid) )
-                            ).Where( _a => _a.Item2 != null);
+                            (from _matchid in Macthids.Except(matchdatasInDB.Select(_rec => _rec.matchid))
+                             select (_matchid, this.func_fetchPubgMatch(_matchid))
+                            ).Where(_a => _a.Item2 != null);
 
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = matchdatasInDB.Concat( matchdatasNotInDb );
 
-            foreach( var _pubgmatch in matchdatasNotInDb)
+            foreach (var _pubgmatch in matchdatasNotInDb)
             {
                 PubgAPI.Match.Matchdata.MatchAttributes matchattr = _pubgmatch.matchjsonobj.AsObject().data.attributes;
 
                 Database.Models.Match match = new Models.Match()
                 {
-                    Matchid       = _pubgmatch.matchid,
-                    CreatedAt     = matchattr.createdAt,
-                    Duration      = matchattr.duration,
-                    GameMode      = (Models.Match.MatchGameMode)matchattr.gameMode,
-                    MapName       = (Models.Match.MatchMapName)matchattr.mapName,
+                    Matchid = _pubgmatch.matchid,
+                    CreatedAt = matchattr.createdAt,
+                    Duration = matchattr.duration,
+                    GameMode = (Models.Match.MatchGameMode)matchattr.gameMode,
+                    MapName = (Models.Match.MatchMapName)matchattr.mapName,
                     IsCustomMatch = Convert.ToInt16(matchattr.isCustomMatch),
-                    SeasonState   = (Models.Match.MatchSeasonState)matchattr.seasonState,
-                    Jsondata      = _pubgmatch.matchjsonobj.Value
+                    SeasonState = (Models.Match.MatchSeasonState)matchattr.seasonState,
+                    Jsondata = _pubgmatch.matchjsonobj.Value
                 };
                 this.dbc.Matches.Add(match);
             }
             this.dbc.SaveChanges();
+
+            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = matchdatasInDB.Concat(matchdatasNotInDb);
+
+            return matchdatas;
+        }
+
+        /// <summary>
+        /// refresh the last games for the players
+        /// </summary>
+        /// <param name="Players"></param>
+        public void StoreMatchAndPlayersStats(IEnumerable<PubgAPI.Player> Players)
+        {
+            IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany(_rec => _rec.relationships.matches.data.Select(_match => _match.id)).Distinct();
+
+            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = this.FetchMatches(matchids4AllPlayer);
 
             IEnumerable<Database.Models.Playermatches> playermatches =
                         (from _rec in Players.SelectMany( _a => _a.relationships.matches.data.Select( _match => new { player = _a, matchid = _match.id } ))
@@ -135,6 +129,7 @@ namespace Database
                                             .included.FirstOrDefault(    _a => _a is PubgAPI.PlayerdataParticipant 
                                                                       && ((PubgAPI.PlayerdataParticipant)_a).attributes.stats.playerId == _rec.player.id) 
                                     select new Database.Models.Playermatches(){
+                                        Participant       = _playerstats?.id,
                                         Accountid         = _rec.player.id,
                                         Matchid           = _rec.matchid,
                                         Assists           = _playerstats?.attributes.stats.assists,
@@ -162,34 +157,20 @@ namespace Database
                                         WeaponsAcquired   = _playerstats?.attributes.stats.weaponsAcquired,
                                         WinPlace          = _playerstats?.attributes.stats.winPlace
                                     }
-                        );
+                        ).ToArray();
 
-            var _records2Add = playermatches.Where( _rec => this.dbc.Playermatches.FirstOrDefault( _recdb =>    _rec.Accountid == _recdb.Accountid 
-                                                                                                                           && _rec.Matchid == _recdb.Matchid 
-                                                                                                               ) == null );
+            var _participantList = playermatches.Select(_a => _a.Participant).ToArray();
+            var _recordsinDB = (from _rec in this.dbc.Playermatches
+                                where _participantList.Contains(_rec.Participant)
+                                select _rec.Participant
+                               ).ToArray();
+
+            var _records2Add = playermatches.Where(_rec => !_recordsinDB.Contains(_rec.Participant)).ToArray();
 
             this.dbc.Playermatches.AddRange( _records2Add );
             this.dbc.SaveChanges();
 
             return;   
-        }
-
-        public Models.Match GetMatchdata( PubgAPI.SelektorMatchid Matchid )
-        {
-            return this.dbc.Matches.AsNoTracking().FirstOrDefault( _rec => _rec.Matchid == Matchid.Key );
-        }
-
-        public void StoreMatchdata( PubgAPI.SelektorMatchid Matchid, DateTime Matchdate, string Matchjsondata )
-        {
-            Models.Match match = this.dbc.Matches.First( _rec => _rec.Matchid == Matchid);
-            if (match != null)
-            {
-                match.CreatedAt = Matchdate;
-                match.Jsondata = Matchjsondata;
-            } else {
-                this.dbc.Matches.Add( new Models.Match() { Matchid = Matchid, Jsondata = Matchjsondata, CreatedAt = Matchdate });
-            }
-            this.dbc.SaveChanges();
         }
 
         public IEnumerable<(PubgAPI.SelektorAccountid player, IEnumerable<Database.Models.Playermatches>)> GetLastXMatches(IEnumerable<PubgAPI.SelektorAccountid> Players)
@@ -201,9 +182,38 @@ namespace Database
                        select _playermatch
                       );
             return null;
-        } 
+        }
+
+        //public IEnumerable<PubgAPI.SelektorMatchid> GetMatchidsWithoutJson()
+        //{
+        //    return this.dbc.Matches.Where( _rec => _rec.Jsondata == null).Select( _rec => new PubgAPI.SelektorMatchid( _rec.Matchid ) );
+        //}
+
+        //public Models.Match GetMatchdata( PubgAPI.SelektorMatchid Matchid )
+        //{
+        //    return this.dbc.Matches.AsNoTracking().FirstOrDefault( _rec => _rec.Matchid == Matchid.Key );
+        //}
+
+        //public void StoreMatchdata( PubgAPI.SelektorMatchid Matchid, DateTime Matchdate, string Matchjsondata )
+        //{
+        //    Models.Match match = this.dbc.Matches.First( _rec => _rec.Matchid == Matchid);
+        //    if (match != null)
+        //    {
+        //        match.CreatedAt = Matchdate;
+        //        match.Jsondata = Matchjsondata;
+        //    } else {
+        //        this.dbc.Matches.Add( new Models.Match() { Matchid = Matchid, Jsondata = Matchjsondata, CreatedAt = Matchdate });
+        //    }
+        //    this.dbc.SaveChanges();
+        //}
+
+
     }
 
+    /// -----------------------------------------------------------------------------------------------------------------------------------------------------
+    /// <summary>
+    /// 
+    /// </summary>
     namespace Models
     {
         public class PubgDbContext : DbContext
@@ -216,7 +226,7 @@ namespace Database
             }
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             {
-                optionsBuilder.UseMySQL(this.connectionstring);
+                optionsBuilder.UseMySql(this.connectionstring);
             }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -235,7 +245,7 @@ namespace Database
 
                 modelBuilder.Entity<Playermatches>(entity =>
                 {
-                    entity.HasKey(e => new { e.Accountid, e.Matchid });
+                    entity.HasKey(e => e.Participant);
                     entity.HasOne(e => e.Player);
                     entity.HasOne(e => e.Match);
                 });
@@ -282,6 +292,9 @@ namespace Database
         [Table("Playermatches")]
         public class Playermatches
         {
+            [Column("Participant", TypeName = "varchar(40)")]
+            public string Participant { get; set; }
+
             [Column("Accountid", TypeName = "varchar(40)")]
             public string Accountid { get; set; }
             public PubgAPI.SelektorAccountid AccountidAsObject => new PubgAPI.SelektorAccountid(this.Accountid);

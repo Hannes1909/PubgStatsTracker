@@ -12,7 +12,7 @@ namespace Controller
 
         public PubgStatsController(string DbConnectionstring, string[] PubgAPIKeys)
         {
-            this.db = new Database.DbLayer(DbConnectionstring);
+            this.db = new Database.DbLayer(DbConnectionstring, this.fetchMatchdataFromPubgAPI);
 
             this.pubgapi = new PubgAPI.PubgAPICalls();
             this.pubgapi.SetAPIKeys(PubgAPIKeys);
@@ -35,48 +35,68 @@ namespace Controller
             return null;
         }
 
+        /// <summary>
+        /// aktualisiert Playermatches, welche gerade angezeigt werden
+        /// </summary>
         public void UpdateActivePlayerstats()
         {
             // last Request within 5min
-            this.update_players_Lastmatches(this.pubgapi.GetPlayerData( this.db.GetPlayerWithActiveRequests( new TimeSpan(0,5,0)).Select( _rec => _rec.AccountidAsObject )));
+            this.db.StoreMatchAndPlayersStats(this.pubgapi.GetPlayerData(this.db.GetPlayerWithActiveRequests(new TimeSpan(0, 5, 0)).Select(_rec => new PubgAPI.SelektorAccountid(_rec.Accountid)) ));
         }
 
+        /// <summary>
+        /// aktualisiert Playermatches für alle Spieler, die in der Datenbank geführt werden
+        /// </summary>
         public void UpdatePlayerstats()
         {
-            Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> _funcFetchMatchdata = (_matchid => {
-                try
-                {
-                    return this.pubgapi.GetMatchData( _matchid );
-                }
-                catch
-                {
-                    return null;
-                }
-            });
-
-
-            this.db.StoreMatchAndPlayersStats( this.pubgapi.GetPlayerData(this.db.GetPlayers().Select( _rec => _rec.AccountidAsObject )), _funcFetchMatchdata );
+            this.db.StoreMatchAndPlayersStats( this.pubgapi.GetPlayerData(this.db.GetPlayers().Select( _rec => new PubgAPI.SelektorAccountid(_rec.Accountid))) );
         }
 
-        void update_players_Lastmatches(IEnumerable<PubgAPI.Player> Players)
+        public void FetchMatches(string Matchids)
         {
-            IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany( _rec => _rec.relationships.matches.data.Select( _match => _match.id )).Distinct();
-            //IEnumerable<PubgAPI.Json<PubgAPI.Match>> matchesJson = 
-            //     this.db.GetMatchesAndStore(matchids, ((_matchid) => { return this.pubgapi.GetMatchData( _matchid ).Value; }));
+            this.db.FetchMatches( Matchids.Split(",").Select(_a => new PubgAPI.SelektorMatchid(_a)) );
+        }
 
-            foreach( PubgAPI.Player player in Players)
+        /// <summary>
+        /// fetch matchdata from WebAPI
+        /// </summary>
+        /// <param name="Matchid"></param>
+        /// <returns></returns>
+        PubgAPI.Json<PubgAPI.Match> fetchMatchdataFromPubgAPI(PubgAPI.SelektorMatchid Matchid)
+        {
+            try
             {
-                this.db.CreatePlayermatches(player.id, player.relationships.matches.data.Select( _rec => _rec.id ));
+                return this.pubgapi.GetMatchData(Matchid);
             }
-
-            foreach( PubgAPI.SelektorMatchid matchid in this.db.GetMatchidsWithoutJson())
+            catch (Exception exp)
             {
-                PubgAPI.Json<PubgAPI.Match> jsonmatchdata = this.pubgapi.GetMatchData( matchid );
-                PubgAPI.Match match = jsonmatchdata.AsObject();
-
-                this.db.StoreMatchdata( match.data.id, match.data.attributes.createdAt, jsonmatchdata.Value );
+                return null;
             }
         }
+
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="Players"></param>
+        //void update_players_Lastmatches(IEnumerable<PubgAPI.Player> Players)
+        //{
+        //    IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany( _rec => _rec.relationships.matches.data.Select( _match => _match.id )).Distinct();
+        //    //IEnumerable<PubgAPI.Json<PubgAPI.Match>> matchesJson = 
+        //    //     this.db.GetMatchesAndStore(matchids, ((_matchid) => { return this.pubgapi.GetMatchData( _matchid ).Value; }));
+
+        //    foreach( PubgAPI.Player player in Players)
+        //    {
+        //        this.db.CreatePlayermatches(player.id, player.relationships.matches.data.Select( _rec => _rec.id ));
+        //    }
+
+        //    foreach( PubgAPI.SelektorMatchid matchid in this.db.GetMatchidsWithoutJson())
+        //    {
+        //        PubgAPI.Json<PubgAPI.Match> jsonmatchdata = this.pubgapi.GetMatchData( matchid );
+        //        PubgAPI.Match match = jsonmatchdata.AsObject();
+
+        //        this.db.StoreMatchdata( match.data.id, match.data.attributes.createdAt, jsonmatchdata.Value );
+        //    }
+        //}
 
     }
 

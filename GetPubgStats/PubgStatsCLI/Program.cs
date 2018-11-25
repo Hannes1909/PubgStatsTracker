@@ -20,6 +20,7 @@ PubgStatsCLI Commands
 01 = GetPlayerLastKills(%s)
 11 = UpdatePlayerstats()
 12 = UpdateActivePlayerstats()
+21 = FetchMatchdata(%s)
 
                 ");
 
@@ -42,6 +43,13 @@ PubgStatsCLI Commands
 
                         case 12:
                             controller.UpdateActivePlayerstats();
+                            break;
+
+                        case 21:
+                            System.Console.Write("Matchid: ");
+                            string matches = System.Console.ReadLine();
+                            controller.FetchMatches(matches);
+
                             break;
 
                         default:
