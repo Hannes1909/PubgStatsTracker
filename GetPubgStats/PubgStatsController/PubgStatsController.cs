@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 
 
 namespace Controller
@@ -55,6 +56,15 @@ namespace Controller
         public void FetchMatches(string Matchids)
         {
             this.db.FetchMatches( Matchids.Split(",").Select(_a => new PubgAPI.SelektorMatchid(_a)) );
+        }
+
+
+        public void ImportMatches(string filenames)
+        {
+            this.db.SaveMatchdata2DB( (from _filename in System.IO.Directory.GetFiles(".", filenames)
+                                       select new PubgAPI.Json<PubgAPI.Match>(System.IO.File.ReadAllText(_filename))
+                                      )
+                                    );
         }
 
         /// <summary>

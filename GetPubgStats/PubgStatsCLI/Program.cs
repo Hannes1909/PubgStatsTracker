@@ -21,6 +21,7 @@ PubgStatsCLI Commands
 11 = UpdatePlayerstats()
 12 = UpdateActivePlayerstats()
 21 = FetchMatchdata(%s)
+29 = ImportMatchdata(%s)
 
                 ");
 
@@ -49,6 +50,12 @@ PubgStatsCLI Commands
                             System.Console.Write("Matchid: ");
                             string matches = System.Console.ReadLine();
                             controller.FetchMatches(matches);
+                            break;
+
+                        case 29:
+                            System.Console.Write("Filename (*.match)");
+                            string matchfilemask = System.Console.ReadLine();
+                            controller.ImportMatches(matchfilemask);
 
                             break;
 

@@ -230,7 +230,7 @@ namespace PubgAPI
 
                 public string shardId { get; set; }
                 public object tags { get; set; }
-                public MatchdataSeasonState seasonState { get; set; }
+                public MatchdataSeasonState? seasonState { get; set; }
                 public enum MatchdataSeasonState { closed, prepare, progress }
                 public DateTime createdAt { get; set; }
                 public object stats { get; set; }

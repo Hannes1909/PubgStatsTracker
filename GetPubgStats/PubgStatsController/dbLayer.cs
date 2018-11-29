@@ -67,6 +67,37 @@ namespace Database
             return this.dbc.Players.AsNoTracking();
         }
 
+        public IQueryable<Models.Match> GetMatches()
+        {
+            return this.dbc.Matches.AsNoTracking();
+        }
+
+        public void SaveMatchdata2DB(IEnumerable<PubgAPI.Json<PubgAPI.Match>> matches)
+        {
+            foreach (var _pubgmatch in matches)
+            {
+                string matchid = _pubgmatch.AsObject().data.id;
+                if (this.dbc.Matches.Where( _rec => _rec.Matchid == matchid).Count() == 0)
+                {
+                    PubgAPI.Match.Matchdata.MatchAttributes matchattr = _pubgmatch.AsObject().data.attributes;
+
+                    Database.Models.Match match = new Models.Match()
+                    {
+                        Matchid = matchid,
+                        CreatedAt = matchattr.createdAt,
+                        Duration = matchattr.duration,
+                        GameMode = (Models.Match.MatchGameMode)matchattr.gameMode,
+                        MapName = (Models.Match.MatchMapName)matchattr.mapName,
+                        IsCustomMatch = Convert.ToInt16(matchattr.isCustomMatch),
+                        SeasonState = (Models.Match.MatchSeasonState?)matchattr.seasonState,
+                        Jsondata = _pubgmatch.Value
+                    };
+                    this.dbc.Matches.Add(match);
+                }
+            }
+            this.dbc.SaveChanges();
+        }
+
         /// <summary>
         /// retrieve matches and insert into database
         /// </summary>
@@ -86,25 +117,7 @@ namespace Database
                              select (_matchid, this.func_fetchPubgMatch(_matchid))
                             ).Where(_a => _a.Item2 != null);
 
-
-            foreach (var _pubgmatch in matchdatasNotInDb)
-            {
-                PubgAPI.Match.Matchdata.MatchAttributes matchattr = _pubgmatch.matchjsonobj.AsObject().data.attributes;
-
-                Database.Models.Match match = new Models.Match()
-                {
-                    Matchid = _pubgmatch.matchid,
-                    CreatedAt = matchattr.createdAt,
-                    Duration = matchattr.duration,
-                    GameMode = (Models.Match.MatchGameMode)matchattr.gameMode,
-                    MapName = (Models.Match.MatchMapName)matchattr.mapName,
-                    IsCustomMatch = Convert.ToInt16(matchattr.isCustomMatch),
-                    SeasonState = (Models.Match.MatchSeasonState)matchattr.seasonState,
-                    Jsondata = _pubgmatch.matchjsonobj.Value
-                };
-                this.dbc.Matches.Add(match);
-            }
-            this.dbc.SaveChanges();
+            this.SaveMatchdata2DB(matchdatasNotInDb.Select(_a => _a.matchjsonobj));
 
             IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = matchdatasInDB.Concat(matchdatasNotInDb);
 
