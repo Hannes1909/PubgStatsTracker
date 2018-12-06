@@ -1,37 +1,37 @@
-using System;
-using System.Collections.Generic;
+using PubgStatsController.Rest.Models;
+using PubgStatsController.Rest;
 using System.Linq;
-using System.IO;
-
+using Database;
+using System;
 
 namespace Controller
 {
     public class PubgStatsController
     {
-        Database.DbLayer db;
-        PubgAPI.PubgAPICalls pubgapi;
+        private readonly PubgRestClient apiClient;
+        private readonly DbLayer dbLayer;
 
-        public PubgStatsController(string DbConnectionstring, string[] PubgAPIKeys)
+        public PubgStatsController(string databaseConnectionString, string pubgApiBaseUrl, string[] pubgApiKeys)
         {
-            this.db = new Database.DbLayer(DbConnectionstring, this.fetchMatchdataFromPubgAPI);
-
-            this.pubgapi = new PubgAPI.PubgAPICalls();
-            this.pubgapi.SetAPIKeys(PubgAPIKeys);
+            this.dbLayer = new DbLayer(databaseConnectionString, this.FetchMatchdataFromPubgAPI);
+            this.apiClient = new PubgRestClient(pubgApiBaseUrl, pubgApiKeys);
         }
 
-        public int[] GetPlayerLastKills(string Playername, int Count)
+        public int[] GetPlayerLastKills(string playerName, int count)
         {
-            PubgAPI.SelektorAccountid accountid;
-            Database.Models.Playerdetail playeredetail = this.db.GetPlayer4Playername( Playername );
+            SelectorAccountId accountid;
+            Database.Models.Playerdetail playeredetail = this.dbLayer.GetPlayer4Playername(playerName);
             if (playeredetail == null)
             {
-                PubgAPI.Player player = pubgapi.GetPlayerData4Playername(Playername);
-                this.db.CreatePlayer( player.id, player.attributes.name );
-                accountid = player.id;
-            } else {
+                Player player = this.apiClient.GetPlayerByIngameName(playerName);
+                this.dbLayer.CreatePlayer(player.AccountId, player.Attributes.Name);
+                accountid = player.AccountId;
+            }
+            else
+            {
                 accountid = playeredetail.Accountid;
             }
-            this.db.SetActiveRequest4Player( accountid );
+            this.dbLayer.SetActiveRequest4Player(accountid);
 
             return null;
         }
@@ -42,7 +42,7 @@ namespace Controller
         public void UpdateActivePlayerstats()
         {
             // last Request within 5min
-            this.db.StoreMatchAndPlayersStats(this.pubgapi.GetPlayerData(this.db.GetPlayerWithActiveRequests(new TimeSpan(0, 5, 0)).Select(_rec => new PubgAPI.SelektorAccountid(_rec.Accountid)) ));
+            this.dbLayer.StoreMatchAndPlayersStats(this.apiClient.GetPlayersByAccountIds(this.dbLayer.GetPlayerWithActiveRequests(new TimeSpan(0, 5, 0)).Select(_rec => new SelectorAccountId(_rec.Accountid))));
         }
 
         /// <summary>
@@ -50,19 +50,19 @@ namespace Controller
         /// </summary>
         public void UpdatePlayerstats()
         {
-            this.db.StoreMatchAndPlayersStats( this.pubgapi.GetPlayerData(this.db.GetPlayers().Select( _rec => new PubgAPI.SelektorAccountid(_rec.Accountid))) );
+            this.dbLayer.StoreMatchAndPlayersStats(this.apiClient.GetPlayersByAccountIds(this.dbLayer.GetPlayers().Select(_rec => new SelectorAccountId(_rec.Accountid))));
         }
 
-        public void FetchMatches(string Matchids)
+        public void FetchMatches(string matchIds)
         {
-            this.db.FetchMatches( Matchids.Split(",").Select(_a => new PubgAPI.SelektorMatchid(_a)) );
+            this.dbLayer.FetchMatches(matchIds.Split(",").Select(_a => new SelectorMatchId(_a)));
         }
 
 
         public void ImportMatches(string filenames)
         {
-            this.db.SaveMatchdata2DB( (from _filename in System.IO.Directory.GetFiles(".", filenames)
-                                       select new PubgAPI.Json<PubgAPI.Match>(System.IO.File.ReadAllText(_filename))
+            this.dbLayer.SaveMatchdata2DB((from _filename in System.IO.Directory.GetFiles(".", filenames)
+                                      select new Json<Match>(System.IO.File.ReadAllText(_filename))
                                       )
                                     );
         }
@@ -70,13 +70,13 @@ namespace Controller
         /// <summary>
         /// fetch matchdata from WebAPI
         /// </summary>
-        /// <param name="Matchid"></param>
+        /// <param name="matchId"></param>
         /// <returns></returns>
-        PubgAPI.Json<PubgAPI.Match> fetchMatchdataFromPubgAPI(PubgAPI.SelektorMatchid Matchid)
+        private Json<Match> FetchMatchdataFromPubgAPI(SelectorMatchId matchId)
         {
             try
             {
-                return this.pubgapi.GetMatchData(Matchid);
+                return this.apiClient.GetMatch(matchId);
             }
             catch (Exception exp)
             {
@@ -88,21 +88,21 @@ namespace Controller
         ///// 
         ///// </summary>
         ///// <param name="Players"></param>
-        //void update_players_Lastmatches(IEnumerable<PubgAPI.Player> Players)
+        //void update_players_Lastmatches(IEnumerable<Player> Players)
         //{
-        //    IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany( _rec => _rec.relationships.matches.data.Select( _match => _match.id )).Distinct();
-        //    //IEnumerable<PubgAPI.Json<PubgAPI.Match>> matchesJson = 
-        //    //     this.db.GetMatchesAndStore(matchids, ((_matchid) => { return this.pubgapi.GetMatchData( _matchid ).Value; }));
+        //    IEnumerable<SelektorMatchid> matchids4AllPlayer = Players.SelectMany( _rec => _rec.relationships.matches.data.Select( _match => _match.id )).Distinct();
+        //    //IEnumerable<Json<Match>> matchesJson = 
+        //    //     this.db.GetMatchesAndStore(matchids, ((_matchid) => { return this.GetMatchData( _matchid ).Value; }));
 
-        //    foreach( PubgAPI.Player player in Players)
+        //    foreach( Player player in Players)
         //    {
         //        this.db.CreatePlayermatches(player.id, player.relationships.matches.data.Select( _rec => _rec.id ));
         //    }
 
-        //    foreach( PubgAPI.SelektorMatchid matchid in this.db.GetMatchidsWithoutJson())
+        //    foreach( SelektorMatchid matchid in this.db.GetMatchidsWithoutJson())
         //    {
-        //        PubgAPI.Json<PubgAPI.Match> jsonmatchdata = this.pubgapi.GetMatchData( matchid );
-        //        PubgAPI.Match match = jsonmatchdata.AsObject();
+        //        Json<Match> jsonmatchdata = this.GetMatchData( matchid );
+        //        Match match = jsonmatchdata.AsObject();
 
         //        this.db.StoreMatchdata( match.data.id, match.data.attributes.createdAt, jsonmatchdata.Value );
         //    }

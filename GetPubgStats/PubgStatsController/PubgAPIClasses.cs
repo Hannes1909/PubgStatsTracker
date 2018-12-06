@@ -4,8 +4,9 @@ using System.Text;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using System.Linq;
+using PubgStatsController.Rest.Enums;
 
-namespace PubgAPI
+namespace PubgStatsController.Rest.Models
 {
     /// <summary>
     /// returnobject for PubgAPI-Calls
@@ -13,23 +14,22 @@ namespace PubgAPI
     /// <typeparam name="T"></typeparam>
     public class Json<T>
     {
-        string jsondata;
-        T jsonobjectCached;
+        private T cachedObject;
 
-        public Json(string Jsondata)
+        public Json(string rawJson)
         {
-            this.jsondata = Jsondata;
+            this.Value = rawJson;
         }
 
         public T AsObject() {
-            if (this.jsonobjectCached == null)
+            if (this.cachedObject == null)
             {
-                this.jsonobjectCached = JsonConvert.DeserializeObject<T>(this.jsondata);
+                this.cachedObject = JsonConvert.DeserializeObject<T>(this.Value);
             } 
-            return this.jsonobjectCached; 
+            return this.cachedObject; 
         }
 
-        public string Value { get { return this.jsondata; }}
+        public string Value { get; private set; }
     } 
 
     /// <summary>
@@ -37,43 +37,40 @@ namespace PubgAPI
     /// </summary>
     public abstract class KeyString
     {
-        string value;
-
         public KeyString() { }
-        public KeyString(string Key)
+
+        public KeyString(string key)
         {
-            this.value = Key;
+            this.Key = key;
         }
-        public string Key
-        {
-            get { return this.value; }
-            set { this.value = value; }
-        } 
+
+        public virtual string Key { get; set; }
         
         public static bool operator !=(KeyString obj1, KeyString obj2)
         {
-            return obj1.value != obj2.value;
+            return obj1.Key != obj2.Key;
         }
         public static bool operator ==(KeyString obj1, KeyString obj2)
         {
-            return obj1.value == obj2.value;
+            return obj1.Key == obj2.Key;
         }
 
         public override bool Equals(object obj)
         {
-            return this.value == ((KeyString)obj).value;
+            return this.Key == ((KeyString)obj).Key;
         }
         public override int GetHashCode()
         {
-            return this.value.GetHashCode();
+            return this.Key.GetHashCode();
         }
         public override string ToString()
         {
-            return this.value;
+            return this.Key;
         }
     }
 
 
+    [Obsolete("Currently unused")]
     /// <summary>
     /// extend IEnumerable for helper functions
     /// </summary>
@@ -93,37 +90,37 @@ namespace PubgAPI
     /// <summary>
     /// represent PUBG-Matchid
     /// </summary>
-    public class SelektorMatchid : KeyString
+    public class SelectorMatchId : KeyString
     {
-        public SelektorMatchid(string Value) : base(Value) {}
-        public SelektorMatchid() { }
+        public SelectorMatchId(string key) : base(key) {}
+        public SelectorMatchId() { }
 
-        public static implicit operator SelektorMatchid(string value)
+        public static implicit operator SelectorMatchId(string key)
         {
-            return new SelektorMatchid(value);
+            return new SelectorMatchId(key);
         }
 
-        public static implicit operator string(SelektorMatchid value)
+        public static implicit operator string(SelectorMatchId matchId)
         {
-            return value.Key;
+            return matchId.Key;
         }
     }
 
     /// <summary>
     /// represent PUBG-Accountid
     /// </summary>
-    public class SelektorAccountid : KeyString
+    public class SelectorAccountId : KeyString
     {
-        public SelektorAccountid(string Value) : base(Value) {}
-        public SelektorAccountid() { }
+        public SelectorAccountId(string key) : base(key) {}
+        public SelectorAccountId() { }
 
-        public static implicit operator SelektorAccountid(string value)
+        public static implicit operator SelectorAccountId(string key)
         {
-            return new SelektorAccountid(value);
+            return new SelectorAccountId(key);
         }
-        public static implicit operator string(SelektorAccountid value)
+        public static implicit operator string(SelectorAccountId accountId)
         {
-            return value.Key;
+            return accountId.Key;
         }
     }
 
@@ -133,8 +130,11 @@ namespace PubgAPI
     /// </summary>
     public class PlayerSearchResult
     {
-        public List<Player> data { get; set; }
-        public Links links { get; set; }
+        [JsonProperty("data")]
+        public List<Player> Data { get; set; }
+
+        [JsonProperty("links")]
+        public Links Links { get; set; }
     }
 
     /// <summary>
@@ -142,47 +142,79 @@ namespace PubgAPI
     /// </summary>
     public class Player
     {
-        public string type { get; set; }
-        [JsonConverter(typeof(JsonConverterSelectorValue<SelektorAccountid>))]
-        public SelektorAccountid id { get; set; }
-        public Attributes attributes { get; set; }
-        public class Attributes
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("id")]
+        [JsonConverter(typeof(JsonConverterSelectorValue<SelectorAccountId>))]
+        public SelectorAccountId AccountId { get; set; }
+
+        [JsonProperty("attributes")]
+        public PlayerAttributes Attributes { get; set; }
+
+        public class PlayerAttributes
         {
-            public string name { get; set; }
-            public object stats { get; set; }
-            public string titleId { get; set; }
-            public string shardId { get; set; }
-            public DateTime createdAt { get; set; }
-            public DateTime updatedAt { get; set; }
-            public string patchVersion { get; set; }
+            [JsonProperty("name")]
+            public string Name { get; set; }
+
+            [JsonProperty("stats")]
+            public object Stats { get; set; }
+
+            [JsonProperty("titleId")]
+            public string TitleId { get; set; }
+
+            [JsonProperty("shardId")]
+            public string ShardId { get; set; }
+
+            [Obsolete]
+            [JsonProperty("createdAt")]
+            public DateTime CreatedAt { get; set; }
+
+            [Obsolete]
+            [JsonProperty("updatedAt")]
+            public DateTime UpdatedAt { get; set; }
+
+            [JsonProperty("patchVersion")]
+            public string PatchVersion { get; set; }
         }
 
-
-        public Relationships relationships { get; set; }
-        public class Relationships
+        [JsonProperty("relationships")]
+        public PlayerRelationships Relationships { get; set; }
+        public class PlayerRelationships
         {
-            public Assets assets { get; set; }
-            public class Assets
+
+            [JsonProperty("assets")]
+            public PlayerAssets Assets { get; set; }
+            public class PlayerAssets
             {
-                public List<object> data { get; set; }
+                [JsonProperty("data")]
+                public List<object> Data { get; set; }
             }
 
-            public Matches matches { get; set; }
-            public class Matches
+            [JsonProperty("matches")]
+            public PlayerMatches Matches { get; set; }
+            public class PlayerMatches
             {
-                public List<Match> data { get; set; }
+                [JsonProperty("data")]
+                public List<Match> Data { get; set; }
 
                 public class Match
                 {
-                    public string type { get; set; }
-                    [JsonConverter(typeof(JsonConverterSelectorValue<SelektorMatchid>))]
-                    public SelektorMatchid id { get; set; }
+                    [JsonProperty("type")]
+                    public string Type { get; set; }
+
+                    [JsonProperty("id")]
+                    [JsonConverter(typeof(JsonConverterSelectorValue<SelectorMatchId>))]
+                    public SelectorMatchId MatchId { get; set; }
                 }
             }
         }
 
-        public Links links { get; set; }
-        public Meta meta { get; set; }
+        [JsonProperty("links")]
+        public Links Links { get; set; }
+
+        [JsonProperty("meta")]
+        public Meta Meta { get; set; }
     }
 
     /// <summary>
@@ -190,136 +222,211 @@ namespace PubgAPI
     /// </summary>
     public class Match
     {
-        public Matchdata data { get; set; }
+        [JsonProperty("data")]
+        public Matchdata Data { get; set; }
+
         public class Matchdata
         {
-            public string type { get; set; }
-            public SelektorMatchid id { get; set; }
+            [JsonProperty("type")]
+            public string Type { get; set; }
 
-            public MatchAttributes attributes { get; set; }
+            [JsonProperty("id")]
+            public SelectorMatchId MatchId { get; set; }
+
+            [JsonProperty("attributes")]
+            public MatchAttributes Attributes { get; set; }
             public class MatchAttributes
             {
-                public MatchdataMapName mapName { get; set; }
-                public enum MatchdataMapName { Desert_Main, Erangel_Main, Savage_Main, Range_Main }
-                public bool isCustomMatch { get; set; }
-                public int duration { get; set; }
-                public MatchdataGameMode gameMode { get; set; }
-                public enum MatchdataGameMode { 
-                    duo, 
-                    [EnumMember( Value = "duo-fpp" )]
-                    duo_fpp, 
-                    solo, 
-                    [EnumMember( Value = "solo-fpp" )]
-                    solo_fpp, 
-                    squad, 
-                    [EnumMember( Value = "squad-fpp" )]
-                    squad_fpp, 
-                    [EnumMember( Value = "normal-duo" )]
-                    normal_duo, 
-                    [EnumMember( Value = "normal-duo-fpp" )]
-                    normal_duo_fpp, 
-                    [EnumMember( Value = "normal-solo" )]
-                    normal_solo, 
-                    [EnumMember( Value = "normal-solo-fpp" )]
-                    normal_solo_fpp, 
-                    [EnumMember( Value = "normal-squad" )]
-                    normal_squad, 
-                    [EnumMember( Value = "normal-squad-fpp" )]
-                    normal_squad_fpp 
-                }
+                [JsonProperty("mapName")]
+                public MapName Map { get; set; }
 
-                public string shardId { get; set; }
-                public object tags { get; set; }
-                public MatchdataSeasonState? seasonState { get; set; }
-                public enum MatchdataSeasonState { closed, prepare, progress }
-                public DateTime createdAt { get; set; }
-                public object stats { get; set; }
-                public string titleId { get; set; }
+                [JsonProperty("isCustomMatch")]
+                public bool IsCustomMatch { get; set; }
+
+                [JsonProperty("duration")] //TODO: convert to timespan
+                public int Duration { get; set; }
+
+                [JsonProperty("gameMode")]
+                public GameMode GameMode { get; set; }
+                
+                [JsonProperty("shardId")]
+                public string ShardId { get; set; }
+
+                [JsonProperty("tags")]
+                public object Tags { get; set; }
+
+                [JsonProperty("seasonState")]
+                public SeasonState? SeasonState { get; set; }
+
+                [JsonProperty("createdAt")]
+                public DateTime CreatedAt { get; set; }
+
+                [JsonProperty("stats")]
+                public object Stats { get; set; }
+
+                [JsonProperty("titleId")]
+                public string TitleId { get; set; }
             }
 
-            public Relationships relationships { get; set; }
-            public Links links { get; set; }
+            [JsonProperty("relationships")]
+            public MatchRelationships Relationships { get; set; }
+
+            [JsonProperty("links")]
+            public Links Links { get; set; }
         }
 
-        public List<PlayerData> included { get; set; }
-        public Links links { get; set; }
-        public Meta meta { get; set; }
+        [JsonProperty("included")]
+        public List<PlayerData> Included { get; set; }
+
+        [JsonProperty("links")]
+        public Links Links { get; set; }
+
+        [JsonProperty("meta")]
+        public Meta Meta { get; set; }
     }
 
-
-
-    public class Type_ID
+    public class TypeIdPair
     {
-        public string type { get; set; }
-        public string id { get; set; }
+        [JsonProperty("type")]
+        public string Type { get; set; }
+
+        [JsonProperty("id")]
+        public string Id { get; set; }
     }
 
-    public class Relationships
+    public class MatchRelationships
     {
-        public Rosters rosters { get; set; }
-        public class Rosters
+        [JsonProperty("rosters")]
+        public MatchRosters Rosters { get; set; }
+        public class MatchRosters
         {
-            public List<Type_ID> data { get; set; }
+            [JsonProperty("data")]
+            public List<TypeIdPair> Data { get; set; }
         }
 
-        public Assets assets { get; set; }
-        public class Assets
+        [JsonProperty("assets")]
+        public MatchAssets Assets { get; set; }
+        public class MatchAssets
         {
-            public List<Type_ID> data { get; set; }
+            [JsonProperty("data")]
+            public List<TypeIdPair> Data { get; set; }
         }
     }
-
-
 
     [JsonConverter(typeof(JsonConverterPlayerdata))]
-    public class PlayerData
-    {
-        public string type { get; set; }
-        public string id { get; set; }
-    }
+    public class PlayerData : TypeIdPair
+    {}
 
     public class PlayerdataParticipant : PlayerData
     {
-        public PlayerdataParticipantAttributes attributes { get; set; }
+        [JsonProperty("attributes")]
+        public PlayerdataParticipantAttributes Attributes { get; set; }
+
         public class PlayerdataParticipantAttributes
         {
-            public string shardId { get; set; }
-            public string actor { get; set; }
+            [JsonProperty("shardId")]
+            public string ShardId { get; set; }
 
-            public PlayerdataParticipantAttributesStats stats { get; set; }
+            [JsonProperty("actor")]
+            public string Actor { get; set; }
+
+            [JsonProperty("stats")]
+            public PlayerdataParticipantAttributesStats Stats { get; set; }
             public class PlayerdataParticipantAttributesStats
             {
+                [JsonProperty("DBNOs")]
                 public int? DBNOs { get; set; }
-                public int? assists { get; set; }
-                public int? boosts { get; set; }
-                public double? damageDealt { get; set; }
-                public PlayerStatsDeathType? deathType { get; set; }
-                public enum PlayerStatsDeathType { alive, byplayer, suicide, logout }
-                public int? headshotKills { get; set; }
-                public int? heals { get; set; }
-                public int? killPlace { get; set; }
-                public int? killPoints { get; set; }
-                public double? killPointsDelta { get; set; }
-                public int? killStreaks { get; set; }
-                public int? kills { get; set; }
-                public int? lastKillPoints { get; set; }
-                public int? lastWinPoints { get; set; }
-                public double? longestKill { get; set; }
-                public int? mostDamage { get; set; }
-                public string name { get; set; }
-                public SelektorAccountid playerId { get; set; }
-                public int? revives { get; set; }
-                public double? rideDistance { get; set; }
-                public int? roadKills { get; set; }
-                public double? swimDistance { get; set; }
-                public int? teamKills { get; set; }
-                public double? timeSurvived { get; set; }
-                public int? vehicleDestroys { get; set; }
-                public double? walkDistance { get; set; }
-                public int? weaponsAcquired { get; set; }
-                public int? winPlace { get; set; }
-                public int? winPoints { get; set; }
-                public double? winPointsDelta { get; set; }
+
+                [JsonProperty("assists")]
+                public int? Assists { get; set; }
+
+                [JsonProperty("boosts")]
+                public int? Boosts { get; set; }
+
+                [JsonProperty("damageDealt")]
+                public double? DamageDealt { get; set; }
+
+                [JsonProperty("deathType")]
+                public DeathType? DeathType { get; set; }
+
+                [JsonProperty("headshotKills")]
+                public int? HeadshotKills { get; set; }
+
+                [JsonProperty("heals")]
+                public int? Heals { get; set; }
+
+                [JsonProperty("killPlace")]
+                public int? KillPlace { get; set; }
+
+                [Obsolete("Deprecated for PC")]
+                [JsonProperty("killPoints")]
+                public int? KillPoints { get; set; }
+
+                [Obsolete("Deprecated for PC")]
+                [JsonProperty("killPointsDelta")]
+                public double? KillPointsDelta { get; set; }
+
+                [JsonProperty("killStreaks")]
+                public int? KillStreaks { get; set; }
+
+                [JsonProperty("kills")]
+                public int? Kills { get; set; }
+
+                [JsonProperty("lastKillPoints")]
+                public int? LastKillPoints { get; set; }
+
+                [JsonProperty("lastWinPoints")]
+                public int? LastWinPoints { get; set; }
+
+                [JsonProperty("longestKill")]
+                public double? LongestKill { get; set; }
+
+                [JsonProperty("mostDamage")]
+                public int? MostDamage { get; set; }
+
+                [JsonProperty("name")]
+                public string Name { get; set; }
+
+                [JsonProperty("playerId")]
+                public SelectorAccountId PlayerId { get; set; }
+
+                [JsonProperty("revives")]
+                public int? Revives { get; set; }
+
+                [JsonProperty("rideDistance")]
+                public double? RideDistance { get; set; }
+
+                [JsonProperty("roadKills")]
+                public int? RoadKills { get; set; }
+
+                [JsonProperty("swimDistance")]
+                public double? SwimDistance { get; set; }
+
+                [JsonProperty("teamKills")]
+                public int? TeamKills { get; set; }
+
+                [JsonProperty("timeSurvived")] //TODO: convert to TimeSpan
+                public double? TimeSurvived { get; set; }
+
+                [JsonProperty("vehicleDestroys")]
+                public int? VehicleDestroys { get; set; }
+
+                [JsonProperty("walkDistance")]
+                public double? WalkDistance { get; set; }
+
+                [JsonProperty("weaponsAcquired")]
+                public int? PickedUpWeapons { get; set; }
+
+                [JsonProperty("winPlace")]
+                public int? GameRank { get; set; }
+
+                [Obsolete("Deprecated for PC")]
+                [JsonProperty("winPoints")]
+                public int? WinPoints { get; set; }
+
+                [Obsolete("Deprecated for PC")]
+                [JsonProperty("winPointsDelta")]
+                public double? WinPointsDelta { get; set; }
             }
         }
     }
@@ -327,33 +434,45 @@ namespace PubgAPI
 
     public class PlayerdataRoster : PlayerData
     {
-        public PlayerdataRoasterAttributes attributes { get; set; }
+        [JsonProperty("attributes")]
+        public PlayerdataRoasterAttributes Attributes { get; set; }
         public class PlayerdataRoasterAttributes
         {
-            public string shardId { get; set; }
-            public string won { get; set; }
+            [JsonProperty("shardId")]
+            public string ShardId { get; set; }
 
-            public PlayerdataRoasterAttributesStats stats { get; set; }
+            [JsonProperty("won")]
+            public string WonMatch { get; set; }
+
+            [JsonProperty("stats")]
+            public PlayerdataRoasterAttributesStats Stats { get; set; }
             public class PlayerdataRoasterAttributesStats
             {
-                public int rank { get; set; }
-                public int teamId { get; set; }
+                [JsonProperty("rank")]
+                public int Rank { get; set; }
+                [JsonProperty("teamId")]
+                public int TeamId { get; set; }
             }
         }
 
-        public PlayerdataRoasterRelationships relationships { get; set; }
+        [JsonProperty("relationships")]
+        public PlayerdataRoasterRelationships Relationships { get; set; }
         public class PlayerdataRoasterRelationships
         {
-            public Team team { get; set; }
-            public class Team
+            [JsonProperty("team")]
+            public MatchTeam Team { get; set; }
+            public class MatchTeam
             {
-                public object data { get; set; }
+                [JsonProperty("data")]
+                public object Data { get; set; }
             }
 
-            public Participants participants { get; set; }
-            public class Participants
+            [JsonProperty("participants")]
+            public MatchParticipants Participants { get; set; }
+            public class MatchParticipants
             {
-                public List<Type_ID> data { get; set; }
+                [JsonProperty("data")]
+                public List<TypeIdPair> Data { get; set; }
             }
         }
     }
@@ -361,12 +480,21 @@ namespace PubgAPI
 
     public class PlayerdataAsset : PlayerData
     {
-        public PlayerdataAssetAttributes attributes { get; set; }
+        [JsonProperty("attributes")]
+        public PlayerdataAssetAttributes Attributes { get; set; }
+
         public class PlayerdataAssetAttributes
         {
-            public string name { get; set; }
-            public string description { get; set; }
-            public DateTime? createdAt { get; set; }
+            [JsonProperty("name")]
+            public string Name { get; set; }
+
+            [JsonProperty("description")]
+            public string Description { get; set; }
+
+            [JsonProperty("createdAt")]
+            public DateTime? CreatedAt { get; set; }
+
+            [JsonProperty("URL")]
             public string URL { get; set; }
         }
     }
@@ -378,8 +506,11 @@ namespace PubgAPI
 
     public class Links
     {
-        public string self { get; set; }
-        public string schema { get; set; }
+        [JsonProperty("self")]
+        public string Self { get; set; }
+
+        [JsonProperty("schema")]
+        public string Schema { get; set; }
     }
 
 
