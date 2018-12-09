@@ -1,5 +1,7 @@
-﻿using System;
+﻿using PubgStatsController.Configuration;
+using PubgStatsController;
 using Controller;
+using System;
 
 namespace PubgStatsCLI
 {
@@ -7,8 +9,8 @@ namespace PubgStatsCLI
     {
         static void Main(string[] args)
         {
-            Configuration.Data data = new Configuration.Data("config.json");
-            PubgStatsController controller = new PubgStatsController(data.Get_DatabaseConnectionstring(), data.Get_PubgAPIKeys());
+            AppConfig config = new AppConfig("config.json");
+            Controller.PubgStatsController controller = new Controller.PubgStatsController(config.DbLayerConnectionString, config.PubgApiBaseUrl, config.PubgApiKeys);
 
             if (args.Length == 0)
             {
@@ -95,9 +97,9 @@ PubgStatsCLI Commands
 
         static void Test1()
         {
-            Configuration.Data data = new Configuration.Data("config.json");
+            AppConfig config = new AppConfig("config.json");
 
-            PubgStatsController controller = new PubgStatsController(data.Get_DatabaseConnectionstring(), data.Get_PubgAPIKeys());
+            Controller.PubgStatsController controller = new Controller.PubgStatsController(config.DbLayerConnectionString, config.PubgApiBaseUrl, config.PubgApiKeys);
             controller.GetPlayerLastKills("gucki5", 20);
             controller.GetPlayerLastKills("Hannes1909", 20);
             controller.GetPlayerLastKills("ClawHunter", 20);

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
-using PubgAPI;
+using PubgStatsController.Rest.Models;
 using Pomelo.EntityFrameworkCore.MySql;
 
 namespace Database
@@ -16,9 +16,9 @@ namespace Database
         /// <summary>
         /// fetch Json-Object für a Matchid
         /// </summary>
-        Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> func_fetchPubgMatch;
+        Func<SelectorMatchId, Json<Match>> func_fetchPubgMatch;
 
-        public DbLayer( string Connectionstring, Func<PubgAPI.SelektorMatchid, PubgAPI.Json<PubgAPI.Match>> FetchPubgMatch)
+        public DbLayer( string Connectionstring, Func<SelectorMatchId, Json<Match>> FetchPubgMatch)
         {
             this.dbc = new Models.PubgDbContext(Connectionstring);
             this.func_fetchPubgMatch = FetchPubgMatch;
@@ -29,7 +29,7 @@ namespace Database
             return this.dbc.Players.AsNoTracking().FirstOrDefault( _rec => _rec.Name == Name);
         }
 
-        public void CreatePlayer(PubgAPI.SelektorAccountid Accountid, string Name)
+        public void CreatePlayer(SelectorAccountId Accountid, string Name)
         {
             Models.Playerdetail player = this.dbc.Players.AsNoTracking().FirstOrDefault( _rec => _rec.Name == Name);
             if (player == null)
@@ -45,7 +45,7 @@ namespace Database
             return;
         }
 
-        public void SetActiveRequest4Player(PubgAPI.SelektorAccountid Accountid )
+        public void SetActiveRequest4Player(SelectorAccountId Accountid )
         {
             Models.Playerdetail player = this.dbc.Players.FirstOrDefault( _rec => _rec.Accountid == Accountid.Key );
             if (player != null)
@@ -72,24 +72,24 @@ namespace Database
             return this.dbc.Matches.AsNoTracking();
         }
 
-        public void SaveMatchdata2DB(IEnumerable<PubgAPI.Json<PubgAPI.Match>> matches)
+        public void SaveMatchdata2DB(IEnumerable<Json<Match>> matches)
         {
             foreach (var _pubgmatch in matches)
             {
-                string matchid = _pubgmatch.AsObject().data.id;
+                string matchid = _pubgmatch.AsObject().Data.MatchId;
                 if (this.dbc.Matches.Where( _rec => _rec.Matchid == matchid).Count() == 0)
                 {
-                    PubgAPI.Match.Matchdata.MatchAttributes matchattr = _pubgmatch.AsObject().data.attributes;
+                    Match.Matchdata.MatchAttributes matchattr = _pubgmatch.AsObject().Data.Attributes;
 
                     Database.Models.Match match = new Models.Match()
                     {
                         Matchid = matchid,
-                        CreatedAt = matchattr.createdAt,
-                        Duration = matchattr.duration,
-                        GameMode = (Models.Match.MatchGameMode)matchattr.gameMode,
-                        MapName = (Models.Match.MatchMapName)matchattr.mapName,
-                        IsCustomMatch = Convert.ToInt16(matchattr.isCustomMatch),
-                        SeasonState = (Models.Match.MatchSeasonState?)matchattr.seasonState,
+                        CreatedAt = matchattr.CreatedAt,
+                        Duration = matchattr.Duration,
+                        GameMode = (Models.Match.MatchGameMode)matchattr.GameMode,
+                        MapName = (Models.Match.MatchMapName)matchattr.Map,
+                        IsCustomMatch = Convert.ToInt16(matchattr.IsCustomMatch),
+                        SeasonState = (Models.Match.MatchSeasonState?)matchattr.SeasonState,
                         Jsondata = _pubgmatch.Value
                     };
                     this.dbc.Matches.Add(match);
@@ -103,23 +103,23 @@ namespace Database
         /// </summary>
         /// <param name="Macthids"></param>
         /// <returns>matchdata jsonobject</returns>
-        public IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> FetchMatches(IEnumerable<PubgAPI.SelektorMatchid> Macthids)
+        public IEnumerable<(SelectorMatchId matchid, Json<Match> matchjsonobj)> FetchMatches(IEnumerable<SelectorMatchId> Macthids)
         {
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatasInDB =
+            IEnumerable<(SelectorMatchId matchid, Json<Match> matchjsonobj)> matchdatasInDB =
                             (from _rec in this.dbc.Matches
                              where Macthids.AsStringArray().Contains(_rec.Matchid)
-                             select new { matchid = new PubgAPI.SelektorMatchid(_rec.Matchid), jsondata = _rec.Jsondata }
+                             select new { matchid = new SelectorMatchId(_rec.Matchid), jsondata = _rec.Jsondata }
                             ).ToArray()
-                            .Select(_rec => { return (_rec.matchid, new PubgAPI.Json<PubgAPI.Match>(_rec.jsondata)); });
+                            .Select(_rec => { return (_rec.matchid, new Json<Match>(_rec.jsondata)); });
 
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatasNotInDb =
+            IEnumerable<(SelectorMatchId matchid, Json<Match> matchjsonobj)> matchdatasNotInDb =
                             (from _matchid in Macthids.Except(matchdatasInDB.Select(_rec => _rec.matchid))
                              select (_matchid, this.func_fetchPubgMatch(_matchid))
                             ).Where(_a => _a.Item2 != null);
 
             this.SaveMatchdata2DB(matchdatasNotInDb.Select(_a => _a.matchjsonobj));
 
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = matchdatasInDB.Concat(matchdatasNotInDb);
+            IEnumerable<(SelectorMatchId matchid, Json<Match> matchjsonobj)> matchdatas = matchdatasInDB.Concat(matchdatasNotInDb);
 
             return matchdatas;
         }
@@ -128,47 +128,47 @@ namespace Database
         /// refresh the last games for the players
         /// </summary>
         /// <param name="Players"></param>
-        public void StoreMatchAndPlayersStats(IEnumerable<PubgAPI.Player> Players)
+        public void StoreMatchAndPlayersStats(IEnumerable<Player> Players)
         {
-            IEnumerable<PubgAPI.SelektorMatchid> matchids4AllPlayer = Players.SelectMany(_rec => _rec.relationships.matches.data.Select(_match => _match.id)).Distinct();
+            IEnumerable<SelectorMatchId> matchids4AllPlayer = Players.SelectMany(_rec => _rec.Relationships.Matches.Data.Select(_match => _match.MatchId)).Distinct();
 
-            IEnumerable<(PubgAPI.SelektorMatchid matchid, PubgAPI.Json<PubgAPI.Match> matchjsonobj)> matchdatas = this.FetchMatches(matchids4AllPlayer);
+            IEnumerable<(SelectorMatchId matchid, Json<Match> matchjsonobj)> matchdatas = this.FetchMatches(matchids4AllPlayer);
 
             IEnumerable<Database.Models.Playermatches> playermatches =
-                        (from _rec in Players.SelectMany( _a => _a.relationships.matches.data.Select( _match => new { player = _a, matchid = _match.id } ))
+                        (from _rec in Players.SelectMany( _a => _a.Relationships.Matches.Data.Select( _match => new { player = _a, matchid = _match.MatchId } ))
                                     join _matchdata in matchdatas
                                       on _rec.matchid equals _matchdata.matchid
-                                    let _playerstats = (PubgAPI.PlayerdataParticipant)_matchdata.matchjsonobj.AsObject()
-                                            .included.FirstOrDefault(    _a => _a is PubgAPI.PlayerdataParticipant 
-                                                                      && ((PubgAPI.PlayerdataParticipant)_a).attributes.stats.playerId == _rec.player.id) 
+                                    let _playerstats = (PlayerdataParticipant)_matchdata.matchjsonobj.AsObject()
+                                            .Included.FirstOrDefault(    _a => _a is PlayerdataParticipant 
+                                                                      && ((PlayerdataParticipant)_a).Attributes.Stats.PlayerId == _rec.player.AccountId) 
                                     select new Database.Models.Playermatches(){
-                                        Participant       = _playerstats?.id,
-                                        Accountid         = _rec.player.id,
+                                        Participant       = _playerstats?.Id,
+                                        Accountid         = _rec.player.AccountId,
                                         Matchid           = _rec.matchid,
-                                        Assists           = _playerstats?.attributes.stats.assists,
-                                        Boosts            = _playerstats?.attributes.stats.boosts,
-                                        DBNOs             = _playerstats?.attributes.stats.DBNOs,
-                                        DamageDealt       = _playerstats?.attributes.stats.damageDealt,
-                                        DeathType         = (Database.Models.Playermatches.PlayerDeathType)_playerstats?.attributes.stats.deathType,
-                                        HeadshotKills     = _playerstats?.attributes.stats.headshotKills,
-                                        Heals             = _playerstats?.attributes.stats.heals,
-                                        KillPlace         = _playerstats?.attributes.stats.killPlace,
-                                        KillStreaks       = _playerstats?.attributes.stats.killStreaks,
-                                        Kills             = _playerstats?.attributes.stats.kills,
-                                        LastKillPoints    = _playerstats?.attributes.stats.lastKillPoints,
-                                        LastWinPoints     = _playerstats?.attributes.stats.lastWinPoints,
-                                        LongestKill       = _playerstats?.attributes.stats.longestKill,
-                                        MostDamage        = _playerstats?.attributes.stats.mostDamage,
-                                        Revives           = _playerstats?.attributes.stats.revives,
-                                        RideDistance      = _playerstats?.attributes.stats.rideDistance,
-                                        RoadKills         = _playerstats?.attributes.stats.roadKills,
-                                        SwimDistance      = _playerstats?.attributes.stats.swimDistance,
-                                        TeamKills         = _playerstats?.attributes.stats.teamKills,
-                                        TimeSurvived      = _playerstats?.attributes.stats.timeSurvived,
-                                        VehicleDestroys   = _playerstats?.attributes.stats.vehicleDestroys,
-                                        WalkDistance      = _playerstats?.attributes.stats.walkDistance,
-                                        WeaponsAcquired   = _playerstats?.attributes.stats.weaponsAcquired,
-                                        WinPlace          = _playerstats?.attributes.stats.winPlace
+                                        Assists           = _playerstats?.Attributes.Stats.Assists,
+                                        Boosts            = _playerstats?.Attributes.Stats.Boosts,
+                                        DBNOs             = _playerstats?.Attributes.Stats.DBNOs,
+                                        DamageDealt       = _playerstats?.Attributes.Stats.DamageDealt,
+                                        DeathType         = (Database.Models.Playermatches.PlayerDeathType)_playerstats?.Attributes.Stats.DeathType,
+                                        HeadshotKills     = _playerstats?.Attributes.Stats.HeadshotKills,
+                                        Heals             = _playerstats?.Attributes.Stats.Heals,
+                                        KillPlace         = _playerstats?.Attributes.Stats.KillPlace,
+                                        KillStreaks       = _playerstats?.Attributes.Stats.KillStreaks,
+                                        Kills             = _playerstats?.Attributes.Stats.Kills,
+                                        LastKillPoints    = _playerstats?.Attributes.Stats.LastKillPoints,
+                                        LastWinPoints     = _playerstats?.Attributes.Stats.LastWinPoints,
+                                        LongestKill       = _playerstats?.Attributes.Stats.LongestKill,
+                                        MostDamage        = _playerstats?.Attributes.Stats.MostDamage,
+                                        Revives           = _playerstats?.Attributes.Stats.Revives,
+                                        RideDistance      = _playerstats?.Attributes.Stats.RideDistance,
+                                        RoadKills         = _playerstats?.Attributes.Stats.RoadKills,
+                                        SwimDistance      = _playerstats?.Attributes.Stats.SwimDistance,
+                                        TeamKills         = _playerstats?.Attributes.Stats.TeamKills,
+                                        TimeSurvived      = _playerstats?.Attributes.Stats.TimeSurvived,
+                                        VehicleDestroys   = _playerstats?.Attributes.Stats.VehicleDestroys,
+                                        WalkDistance      = _playerstats?.Attributes.Stats.WalkDistance,
+                                        WeaponsAcquired   = _playerstats?.Attributes.Stats.PickedUpWeapons,
+                                        WinPlace          = _playerstats?.Attributes.Stats.GameRank
                                     }
                         ).ToArray();
 
@@ -186,7 +186,7 @@ namespace Database
             return;   
         }
 
-        public IEnumerable<(PubgAPI.SelektorAccountid player, IEnumerable<Database.Models.Playermatches>)> GetLastXMatches(IEnumerable<PubgAPI.SelektorAccountid> Players)
+        public IEnumerable<(SelectorAccountId player, IEnumerable<Database.Models.Playermatches>)> GetLastXMatches(IEnumerable<SelectorAccountId> Players)
         {
             var xxx = (from _playermatch in this.dbc.Playermatches
                        join _match in this.dbc.Matches
@@ -216,15 +216,15 @@ namespace Database
 
         //public IEnumerable<PubgAPI.SelektorMatchid> GetMatchidsWithoutJson()
         //{
-        //    return this.dbc.Matches.Where( _rec => _rec.Jsondata == null).Select( _rec => new PubgAPI.SelektorMatchid( _rec.Matchid ) );
+        //    return this.dbc.Matches.Where( _rec => _rec.Jsondata == null).Select( _rec => new SelektorMatchid( _rec.Matchid ) );
         //}
 
-        //public Models.Match GetMatchdata( PubgAPI.SelektorMatchid Matchid )
+        //public Models.Match GetMatchdata( SelektorMatchid Matchid )
         //{
         //    return this.dbc.Matches.AsNoTracking().FirstOrDefault( _rec => _rec.Matchid == Matchid.Key );
         //}
 
-        //public void StoreMatchdata( PubgAPI.SelektorMatchid Matchid, DateTime Matchdate, string Matchjsondata )
+        //public void StoreMatchdata( SelektorMatchid Matchid, DateTime Matchdate, string Matchjsondata )
         //{
         //    Models.Match match = this.dbc.Matches.First( _rec => _rec.Matchid == Matchid);
         //    if (match != null)
@@ -291,7 +291,7 @@ namespace Database
         {
             [Column("Matchid", TypeName="varchar(40)")]
             public string Matchid { get; set; }
-            public PubgAPI.SelektorMatchid MatchidAsObject => new PubgAPI.SelektorMatchid(this.Matchid);
+            public SelectorMatchId MatchidAsObject => new SelectorMatchId(this.Matchid);
 
             public DateTime? CreatedAt { get; set; } //Time this match object was stored in the API
             public int? Duration { get; set; } // Length of the match measured in seconds
@@ -312,7 +312,7 @@ namespace Database
         {
             [Column("Accountid", TypeName = "varchar(40)")]
             public string Accountid { get; set; }
-            public PubgAPI.SelektorAccountid AccountidAsObject => new PubgAPI.SelektorAccountid(this.Accountid);
+            public SelectorAccountId AccountidAsObject => new SelectorAccountId(this.Accountid);
             [Column("Name", TypeName="varchar(40)")]
             public string Name { get; set; }
 
@@ -327,11 +327,11 @@ namespace Database
 
             [Column("Accountid", TypeName = "varchar(40)")]
             public string Accountid { get; set; }
-            public PubgAPI.SelektorAccountid AccountidAsObject => new PubgAPI.SelektorAccountid(this.Accountid);
+            public SelectorAccountId AccountidAsObject => new SelectorAccountId(this.Accountid);
 
             [Column("Matchid", TypeName = "varchar(40)")]
             public string Matchid { get; set; }
-            public PubgAPI.SelektorMatchid MatchidAsObject => new PubgAPI.SelektorMatchid(this.Matchid);
+            public SelectorMatchId MatchidAsObject => new SelectorMatchId(this.Matchid);
 
             public int? DBNOs { get; set; } // Number of enemy players knocked
             public int? Assists { get; set; } // Number of enemy players this player damaged that were killed by teammates
