@@ -67,6 +67,12 @@ namespace Controller
                                     );
         }
 
+
+        public void Test()
+        {
+            var _xxx = this.db.GetTeamPlayersLastGame(this.db.GetPlayer4Playername("gucki5").AccountidAsObject);
+        }
+
         /// <summary>
         /// fetch matchdata from WebAPI
         /// </summary>

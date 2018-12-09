@@ -59,6 +59,11 @@ PubgStatsCLI Commands
 
                             break;
 
+                        case 99:
+                            controller.Test();
+
+                            break;
+
                         default:
                             return;
                     }

@@ -197,6 +197,23 @@ namespace Database
             return null;
         }
 
+        public IEnumerable<PubgAPI.SelektorAccountid> GetTeamPlayersLastGame(PubgAPI.SelektorAccountid player)
+        {
+            var participant = (from _playermatch in this.dbc.Playermatches
+                               join _match in this.dbc.Matches
+                               on _playermatch.Matchid equals _match.Matchid
+                               orderby _match.CreatedAt descending
+                               where _playermatch.Accountid == player.Key
+                               select _playermatch.Participant
+                              ).FirstOrDefault();
+
+            return (from _playermatches in this.dbc.Playermatches
+                    where _playermatches.Participant == participant
+                    select new PubgAPI.SelektorAccountid(_playermatches.Accountid)
+                   );
+
+        }
+
         //public IEnumerable<PubgAPI.SelektorMatchid> GetMatchidsWithoutJson()
         //{
         //    return this.dbc.Matches.Where( _rec => _rec.Jsondata == null).Select( _rec => new PubgAPI.SelektorMatchid( _rec.Matchid ) );
