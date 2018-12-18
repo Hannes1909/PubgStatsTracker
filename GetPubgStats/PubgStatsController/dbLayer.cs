@@ -199,7 +199,7 @@ namespace Database
             return null;
         }
 
-        public IEnumerable<PubgAPI.SelektorAccountid> GetTeamPlayersLastGame(PubgAPI.SelektorAccountid player)
+        public IEnumerable<SelectorAccountId> GetTeamPlayersLastGame(SelectorAccountId player)
         {
             var participant = (from _playermatch in this.dbc.Playermatches
                                join _match in this.dbc.Matches
@@ -211,7 +211,7 @@ namespace Database
 
             return (from _playermatches in this.dbc.Playermatches
                     where _playermatches.Participant == participant
-                    select new PubgAPI.SelektorAccountid(_playermatches.Accountid)
+                    select new SelectorAccountId(_playermatches.Accountid)
                    );
 
         }
