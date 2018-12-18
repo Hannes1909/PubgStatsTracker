@@ -329,5 +329,8 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
+#Web-app debug config
+/GetPubgStats/PubgStatsWeb/appsettings.Development.json
+
 /GetPubgStats/GetPubgStats/PubgStatsHelper.cs
 GetPubgStats/GetPubgStats/config.json

@@ -1,0 +1,19 @@
+﻿@model string
+
+<div class="jumbotron">
+    @if (User?.Identity?.IsAuthenticated ?? false)
+    {
+        <h1>You are logged in as: @User.Identity.Name</h1>
+
+        <p>
+            @foreach (var claim in Context.User.Claims)
+            {
+                <div>@claim.Type: <b>@claim.Value</b></div>
+            }
+        </p>
+    }
+    else
+    {
+        <h1>You are currently not logged in, please use the login-button in the top right corner...</h1>
+    }
+</div>

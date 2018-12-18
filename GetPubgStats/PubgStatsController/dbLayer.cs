@@ -4,8 +4,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
-using PubgStatsController.Rest.Models;
+using PubgStatsController.PubgApi.Models;
 using Pomelo.EntityFrameworkCore.MySql;
+using PubgStatsController.Sql.Models;
+using PubgStatsController.Sql.Models.Configuration;
 
 namespace Database
 {
@@ -85,7 +87,7 @@ namespace Database
                     {
                         Matchid = matchid,
                         CreatedAt = matchattr.CreatedAt,
-                        Duration = matchattr.Duration,
+                        Duration = (int)matchattr.Duration.TotalSeconds,
                         GameMode = (Models.Match.MatchGameMode)matchattr.GameMode,
                         MapName = (Models.Match.MatchMapName)matchattr.Map,
                         IsCustomMatch = Convert.ToInt16(matchattr.IsCustomMatch),
@@ -164,7 +166,7 @@ namespace Database
                                         RoadKills         = _playerstats?.Attributes.Stats.RoadKills,
                                         SwimDistance      = _playerstats?.Attributes.Stats.SwimDistance,
                                         TeamKills         = _playerstats?.Attributes.Stats.TeamKills,
-                                        TimeSurvived      = _playerstats?.Attributes.Stats.TimeSurvived,
+                                        TimeSurvived      = (double)_playerstats?.Attributes.Stats.TimeSurvived.TotalSeconds,
                                         VehicleDestroys   = _playerstats?.Attributes.Stats.VehicleDestroys,
                                         WalkDistance      = _playerstats?.Attributes.Stats.WalkDistance,
                                         WeaponsAcquired   = _playerstats?.Attributes.Stats.PickedUpWeapons,
@@ -231,12 +233,13 @@ namespace Database
     {
         public class PubgDbContext : DbContext
         {
-            string connectionstring;
+            private readonly string connectionstring;
             public PubgDbContext(string Connectionstring)
             {
                 this.connectionstring = Connectionstring;
                 
             }
+
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             {
                 optionsBuilder.UseMySql(this.connectionstring);
@@ -245,6 +248,8 @@ namespace Database
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
                 base.OnModelCreating(modelBuilder);
+
+                modelBuilder.ApplyConfiguration(new UserModelConfiguration());
 
                 modelBuilder.Entity<Playerdetail>(entity =>
                 {
@@ -264,6 +269,7 @@ namespace Database
                 });
             }
 
+            public DbSet<User> Users { get; set; }
             public DbSet<Match> Matches { get; set; }
             public DbSet<Playerdetail> Players { get; set; }
             public DbSet<Playermatches> Playermatches { get; set; }
