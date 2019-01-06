@@ -4,9 +4,10 @@ using System.Text;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using System.Linq;
-using PubgStatsController.Rest.Enums;
+using PubgStatsController.PubgApi.Enums;
+using PubgStatsController.PubgApi.Converters;
 
-namespace PubgStatsController.Rest.Models
+namespace PubgStatsController.PubgApi.Models
 {
     /// <summary>
     /// returnobject for PubgAPI-Calls
@@ -243,8 +244,9 @@ namespace PubgStatsController.Rest.Models
                 [JsonProperty("isCustomMatch")]
                 public bool IsCustomMatch { get; set; }
 
-                [JsonProperty("duration")] //TODO: convert to timespan
-                public int Duration { get; set; }
+                [JsonProperty("duration")]
+                [JsonConverter(typeof(SecondsTimeSpanConverter))]
+                public TimeSpan Duration { get; set; }
 
                 [JsonProperty("gameMode")]
                 public GameMode GameMode { get; set; }
@@ -405,8 +407,9 @@ namespace PubgStatsController.Rest.Models
                 [JsonProperty("teamKills")]
                 public int? TeamKills { get; set; }
 
-                [JsonProperty("timeSurvived")] //TODO: convert to TimeSpan
-                public double? TimeSurvived { get; set; }
+                [JsonProperty("timeSurvived")]
+                [JsonConverter(typeof(SecondsTimeSpanConverter))]
+                public TimeSpan TimeSurvived { get; set; }
 
                 [JsonProperty("vehicleDestroys")]
                 public int? VehicleDestroys { get; set; }
