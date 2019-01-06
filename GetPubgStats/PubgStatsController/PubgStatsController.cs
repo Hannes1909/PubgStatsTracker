@@ -70,7 +70,7 @@ namespace Controller
 
         public void Test()
         {
-            var _xxx = this.db.GetTeamPlayersLastGame(this.db.GetPlayer4Playername("gucki5").AccountidAsObject);
+            var _xxx = this.dbLayer.GetTeamPlayersLastGame(this.dbLayer.GetPlayer4Playername("gucki5").AccountidAsObject);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Controller
             {
                 return this.apiClient.GetMatch(matchId);
             }
-            catch (Exception exp)
+            catch (Exception)
             {
                 return null;
             }
